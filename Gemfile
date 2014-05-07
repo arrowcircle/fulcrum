@@ -23,12 +23,18 @@ group :production do
   gem 'rails_12factor'
 end
 
-group :development, :test do
+group :development do
+  gem 'letter_opener'
+  gem 'quiet_assets'
+  gem 'pry-rails'
+end
+
+group :test do
   gem 'rspec-rails'
   gem 'guard-rspec'
   gem 'factory_girl_rails'
   gem 'jasmine', '~> 1.3.2'
   gem 'capybara'
-  gem 'capybara-webkit'
+  gem 'poltergeist'
   gem 'database_cleaner'
 end
