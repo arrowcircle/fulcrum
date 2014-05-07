@@ -1,14 +1,12 @@
 class CreateChangesets < ActiveRecord::Migration
-  def self.up
+  def change
     create_table :changesets do |t|
       t.references :story
       t.references :project
 
       t.timestamps
     end
-  end
-
-  def self.down
-    drop_table :changesets
+    add_index :changesets, :story_id
+    add_index :changesets, :project_id
   end
 end

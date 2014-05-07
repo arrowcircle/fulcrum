@@ -11,7 +11,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20120504152649) do
+ActiveRecord::Schema.define(version: 20110727105037) do
+
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
 
   create_table "changesets", force: true do |t|
     t.integer  "story_id"
@@ -19,6 +22,9 @@ ActiveRecord::Schema.define(version: 20120504152649) do
     t.datetime "created_at"
     t.datetime "updated_at"
   end
+
+  add_index "changesets", ["project_id"], name: "index_changesets_on_project_id", using: :btree
+  add_index "changesets", ["story_id"], name: "index_changesets_on_story_id", using: :btree
 
   create_table "notes", force: true do |t|
     t.text     "note"
@@ -28,21 +34,27 @@ ActiveRecord::Schema.define(version: 20120504152649) do
     t.datetime "updated_at"
   end
 
+  add_index "notes", ["story_id"], name: "index_notes_on_story_id", using: :btree
+  add_index "notes", ["user_id"], name: "index_notes_on_user_id", using: :btree
+
   create_table "projects", force: true do |t|
     t.string   "name"
     t.string   "point_scale",         default: "fibonacci"
     t.date     "start_date"
     t.integer  "iteration_start_day", default: 1
     t.integer  "iteration_length",    default: 1
+    t.integer  "default_velocity",    default: 10
     t.datetime "created_at"
     t.datetime "updated_at"
-    t.integer  "default_velocity",    default: 10
   end
 
   create_table "projects_users", id: false, force: true do |t|
     t.integer "project_id"
     t.integer "user_id"
   end
+
+  add_index "projects_users", ["project_id"], name: "index_projects_users_on_project_id", using: :btree
+  add_index "projects_users", ["user_id"], name: "index_projects_users_on_user_id", using: :btree
 
   create_table "stories", force: true do |t|
     t.string   "title"
@@ -54,19 +66,23 @@ ActiveRecord::Schema.define(version: 20120504152649) do
     t.integer  "requested_by_id"
     t.integer  "owned_by_id"
     t.integer  "project_id"
-    t.datetime "created_at"
-    t.datetime "updated_at"
     t.decimal  "position"
     t.string   "labels"
+    t.datetime "created_at"
+    t.datetime "updated_at"
   end
 
+  add_index "stories", ["owned_by_id"], name: "index_stories_on_owned_by_id", using: :btree
+  add_index "stories", ["project_id"], name: "index_stories_on_project_id", using: :btree
+  add_index "stories", ["requested_by_id"], name: "index_stories_on_requested_by_id", using: :btree
+
   create_table "users", force: true do |t|
-    t.string   "email",                              default: "",   null: false
-    t.string   "encrypted_password",     limit: 128, default: "",   null: false
+    t.string   "email",                  default: "",   null: false
+    t.string   "encrypted_password",     default: "",   null: false
     t.string   "reset_password_token"
-    t.string   "remember_token"
+    t.datetime "reset_password_sent_at"
     t.datetime "remember_created_at"
-    t.integer  "sign_in_count",                      default: 0
+    t.integer  "sign_in_count",          default: 0,    null: false
     t.datetime "current_sign_in_at"
     t.datetime "last_sign_in_at"
     t.string   "current_sign_in_ip"
@@ -74,20 +90,18 @@ ActiveRecord::Schema.define(version: 20120504152649) do
     t.string   "confirmation_token"
     t.datetime "confirmed_at"
     t.datetime "confirmation_sent_at"
-    t.string   "password_salt"
-    t.datetime "created_at"
-    t.datetime "updated_at"
     t.string   "name"
     t.string   "initials"
-    t.boolean  "email_delivery",                     default: true
-    t.boolean  "email_acceptance",                   default: true
-    t.boolean  "email_rejection",                    default: true
-    t.datetime "reset_password_sent_at"
+    t.boolean  "email_delivery",         default: true
+    t.boolean  "email_acceptance",       default: true
+    t.boolean  "email_rejection",        default: true
     t.string   "locale"
+    t.datetime "created_at"
+    t.datetime "updated_at"
   end
 
-  add_index "users", ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
-  add_index "users", ["email"], name: "index_users_on_email", unique: true
-  add_index "users", ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+  add_index "users", ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true, using: :btree
+  add_index "users", ["email"], name: "index_users_on_email", unique: true, using: :btree
+  add_index "users", ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true, using: :btree
 
 end

@@ -25,6 +25,7 @@ end
 
 group :development, :test do
   gem 'rspec-rails'
+  gem 'guard-rspec'
   gem 'factory_girl_rails'
   gem 'jasmine', '~> 1.3.2'
   gem 'capybara'
