@@ -3,6 +3,7 @@ development:
   adapter: postgresql
   encoding: unicode
   database: fulcrum_development
+  host: localhost
   pool: 5
   username: postgres
   password:
@@ -11,6 +12,7 @@ test:
   adapter: postgresql
   encoding: unicode
   database: fulcrum_test
+  host: localhost
   pool: 5
   username: postgres
   password:
