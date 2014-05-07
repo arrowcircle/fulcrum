@@ -1,30 +1,28 @@
 require 'spec_helper'
 
 describe StoriesController do
-
-  describe "when logged out" do
-    %w[index done backlog in_progress create import import_upload].each do |action|
+  describe 'when logged out' do
+    %w(index done backlog in_progress create import import_upload).each do |action|
       specify do
-        get action, :project_id => 99
-        response.should redirect_to(new_user_session_url)
+        get action, project_id: 99
+        expect(response).to redirect_to new_user_session_url
       end
     end
 
-    %w[show update destroy start finish deliver accept reject].each do |action|
+    %w(show update destroy start finish deliver accept reject).each do |action|
       specify do
-        get action, :project_id => 99, :id => 42
-        response.should redirect_to(new_user_session_url)
+        get action, project_id: 99, id: 42
+        expect(response).to redirect_to new_user_session_url
       end
     end
   end
 
-  context "when logged in" do
-
-    let(:user)      { FactoryGirl.create(:user) }
-    let(:project)   { mock_model(Project, :id => 99, :stories => stories) }
-    let(:story)     { mock_model(Story, :id => 42) }
-    let(:projects)  { double("projects") }
-    let(:stories)   { double("stories", :to_json => '{foo:bar}') }
+  context 'when logged in' do
+    let(:user)      { create(:user) }
+    let(:project)   { mock_model(Project, id: 99, stories: stories) }
+    let(:story)     { mock_model(Story, id: 42) }
+    let(:projects)  { double('projects') }
+    let(:stories)   { double('stories', to_json: '{foo:bar}') }
 
     before do
       subject.stub(:current_user) { user }
@@ -33,8 +31,7 @@ describe StoriesController do
       sign_in user
     end
 
-    describe "#index" do
-
+    describe '#index' do
       before do
         projects.unstub(:find)
         projects.stub(:stories_notes)
@@ -44,217 +41,173 @@ describe StoriesController do
       end
 
       specify do
-        xhr :get, :index, :project_id => project.id, :id => story.id
-        response.should be_success
-        response.body.should == stories.to_json
+        xhr :get, :index, project_id: project.id, id: story.id
+        expect(response).to be_success
+        expect(response.body).to eq stories.to_json
       end
     end
 
-    describe "#import" do
+    describe '#import' do
       specify do
-        get :import, :project_id => project.id
-        response.should be_success
-        assigns[:project].should == project
-        response.should render_template('import')
+        get :import, project_id: project.id
+        expect(response).to be_success
+        expect(assigns[:project]).to eq project
+        expect(response).to render_template('import')
       end
     end
 
-    describe "#import_upload" do
+    describe '#import_upload' do
+      before { project.should_receive(:suppress_notifications=).with(true) }
 
-      before do
-        project.should_receive(:suppress_notifications=).with(true)
-      end
-
-      context "when csv file is missing" do
+      context 'when csv file is missing' do
         specify do
-          post :import_upload, :project_id => project.id
-          response.should render_template('import')
-          flash[:alert].should == "You must select a file for import"
+          post :import_upload, project_id: project.id
+          expect(response).to render_template('import')
+          expect(flash[:alert]).to eq 'You must select a file for import'
         end
       end
 
-      context "when csv file is present" do
-
+      context 'when csv file is present' do
         let(:csv)             { fixture_file_upload('csv/stories.csv') }
-        let(:valid_story)     { mock_model(Story, :valid? => true) }
-        let(:invalid_story)   { mock_model(Story, :valid? => false) }
+        let(:valid_story)     { mock_model(Story, valid?: true) }
+        let(:invalid_story)   { mock_model(Story, valid?: false) }
         let(:import_stories)  { [valid_story, invalid_story] }
 
-        before do
-          stories.stub(:from_csv) { import_stories }
-        end
+        before { stories.stub(:from_csv) { import_stories } }
 
         specify do
-          post :import_upload, :project_id => project.id, :csv => csv
-          response.should be_success
-          assigns[:valid_stories].should == [valid_story]
-          assigns[:invalid_stories].should == [invalid_story]
-          flash[:notice].should == "Imported 1 story"
-          response.should render_template('import')
+          post :import_upload, project_id: project.id, csv: csv
+          expect(response).to be_success
+          expect(assigns[:valid_stories]).to eq [valid_story]
+          expect(assigns[:invalid_stories]).to eq [invalid_story]
+          expect(flash[:notice]).to eq 'Imported 1 story'
+          expect(response).to render_template('import')
         end
 
-        context "when a csv parse error occurs" do
-
+        context 'when a csv parse error occurs' do
           before do
             stories.unstub(:from_csv)
-            stories.stub(:from_csv).and_raise(
-              CSV::MalformedCSVError.new("Bad CSV!")
-            )
+            stories.stub(:from_csv).and_raise(CSV::MalformedCSVError.new("Bad CSV!"))
           end
 
           specify do
-            post :import_upload, :project_id => project.id, :csv => csv
-            response.should be_success
-            flash[:alert].should == "Unable to import CSV: Bad CSV!"
-            response.should render_template('import')
+            post :import_upload, project_id: project.id, csv: csv
+            expect(response).to be_success
+            expect(flash[:alert]).to eq 'Unable to import CSV: Bad CSV!'
+            expect(response).to render_template('import')
           end
-
         end
-
       end
     end
 
-    context "member actions" do
-
-      let(:story) { mock_model(Story, :to_json => '{foo:bar}') }
+    context 'member actions' do
+      let(:story) { mock_model(Story, to_json: '{foo:bar}') }
       # The "foo" key should be stripped from this hash by the controller
-      let(:story_params)  { {'title' => 'New Title', 'foo' => 'Bar'} }
-
+      let(:story_params) { { title: 'New Title', foo: 'Bar' } }
 
       before do
         stories.stub(:find).with(story.id.to_s) { story }
         projects.stub(:find).with(project.id.to_s) { project }
       end
 
-      describe "#show" do
+      describe '#show' do
         specify do
-          xhr :get, :show, :project_id => project.id, :id => story.id
-          response.should be_success
-          response.body.should == story.to_json
+          xhr :get, :show, project_id: project.id, id: story.id
+          expect(response).to be_success
+          expect(response.body).to eq story.to_json
         end
       end
 
-      describe "#update" do
+      describe '#update' do
+        before { story.should_receive(:acting_user=).with(user) }
 
-        before do
-          story.should_receive(:acting_user=).with(user)
-        end
-
-        context "when update succeeds" do
-
-          before do
-            story.should_receive(:update_attributes).with(
-              {'title' => 'New Title'}
-            ) { true }
-          end
+        context 'when update succeeds' do
+          before { story.should_receive(:update_attributes).with({ 'title' => 'New Title' }) { true } }
 
           specify do
-            xhr :get, :update, :project_id => project.id, :id => story.id,
-              :story => story_params
-            response.should be_success
-            response.body.should == story.to_json
+            xhr :get, :update, project_id: project.id, id: story.id,
+                               story: story_params
+            expect(response).to be_success
+            expect(response.body).to eq story.to_json
           end
-
         end
 
-        context "when update fails" do
-
-          before do
-            story.should_receive(:update_attributes).with(
-              {'title' => 'New Title'}
-            ) { false }
-          end
+        context 'when update fails' do
+          before { story.should_receive(:update_attributes).with( { 'title' => 'New Title' }) { false } }
 
           specify do
-            xhr :get, :update, :project_id => project.id, :id => story.id,
-              :story => story_params
-            response.status.should == 422
-            response.body.should == story.to_json
+            xhr :get, :update, project_id: project.id, id: story.id,
+                               story: story_params
+            expect(response.status).to eq 422
+            expect(response.body).to eq story.to_json
           end
         end
       end
 
-      describe "#destroy" do
-
+      describe '#destroy' do
         before { story.should_receive(:destroy) }
 
         specify do
-          xhr :delete, :destroy, :project_id => project.id, :id => story.id
-          response.should be_success
+          xhr :delete, :destroy, project_id: project.id, id: story.id
+          expect(response).to be_success
         end
       end
 
-      %w[done backlog in_progress].each do |action|
-
-        let(:scoped_stories)  { double("scoped_stories", :to_json => '{scoped:y}') }
+      %w(done backlog in_progress).each do |action|
+        let(:scoped_stories)  { double('scoped_stories', to_json: '{scoped:y}') }
 
         describe action do
-
-          before do
-            stories.should_receive(action) { scoped_stories }
-          end
+          before { stories.should_receive(action) { scoped_stories } }
 
           specify do
-            xhr :get, action, :project_id => project.id, :id => story.id
-            response.should be_success
-            response.body.should == scoped_stories.to_json
+            xhr :get, action, project_id: project.id, id: story.id
+            expect(response).to be_success
+            expect(response.body).to eq scoped_stories.to_json
           end
         end
       end
 
-      describe "#create" do
-
+      describe '#create' do
         before do
           stories.should_receive(:build).with(
-            {'title' => 'New Title'}
+            'title' => 'New Title'
           ) { story }
           story.should_receive(:requested_by_id=).with(user.id)
         end
 
-        context "when save succeeds" do
-
-          before do
-            story.should_receive(:save) { true }
-          end
+        context 'when save succeeds' do
+          before { story.should_receive(:save) { true } }
 
           specify do
-            xhr :post, :create, :project_id => project.id, :id => story.id,
-              :story => story_params
-            response.should be_success
-            response.body.should == story.to_json
+            xhr :post, :create, project_id: project.id, id: story.id,
+                                story: story_params
+            expect(response).to be_success
+            expect(response.body).to eq story.to_json
           end
         end
 
-        context "when save fails" do
-
-          before do
-            story.should_receive(:save) { false }
-          end
+        context 'when save fails' do
+          before { story.should_receive(:save) { false } }
 
           specify do
-            xhr :post, :create, :project_id => project.id, :id => story.id,
-              :story => story_params
-            response.status.should == 422
-            response.body.should == story.to_json
+            xhr :post, :create, project_id: project.id, id: story.id,
+                                story: story_params
+            expect(response.status).to eq 422
+            expect(response.body).to eq story.to_json
           end
         end
-
       end
 
-      %w[start finish deliver accept reject].each do |action|
-
+      %w(start finish deliver accept reject).each do |action|
         describe action do
-          before do
-            story.should_receive("#{action}!")
-          end
+          before { story.should_receive("#{action}!") }
+
           specify do
-            xhr :put, action, :project_id => project.id, :id => story.id
-            response.should redirect_to(project_url(project))
+            xhr :put, action, project_id: project.id, id: story.id
+            expect(response).to redirect_to project_url(project)
           end
         end
-
       end
-
     end
   end
 end

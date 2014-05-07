@@ -1,103 +1,87 @@
 require 'spec_helper'
 
 describe ProjectsController do
-
-  context "when logged out" do
-    %W[index new create].each do |action|
+  context 'when logged out' do
+    %w(index new create).each do |action|
       specify do
         get action
-        response.should redirect_to(new_user_session_url)
+        expect(response).to redirect_to new_user_session_url
       end
     end
-    %W[show edit update destroy].each do |action|
+    %w(show edit update destroy).each do |action|
       specify do
-        get action, :id => 42
-        response.should redirect_to(new_user_session_url)
+        get action, id: 42
+        expect(response).to redirect_to new_user_session_url
       end
     end
   end
 
-  context "when logged in" do
-
-    let(:user)      { FactoryGirl.create :user }
-    let(:projects)  { double("projects") }
+  context 'when logged in' do
+    let(:user) { create :user }
+    let(:projects) { double('projects') }
 
     before do
       sign_in user
-      subject.stub(:current_user => user)
-      user.stub(:projects => projects)
+      subject.stub(current_user: user)
+      user.stub(projects: projects)
     end
 
-    describe "collection actions" do
-
-      describe "#index" do
+    describe 'collection actions' do
+      describe '#index' do
 
         specify do
           get :index
-          response.should be_success
-          assigns[:projects].should == projects
+          expect(response).to be_success
+          expect(assigns[:projects]).to eq projects
         end
-
       end
 
-      describe "#new" do
-
+      describe '#new' do
         specify do
           get :new
-          response.should be_success
-          assigns[:project].should be_new_record
+          expect(response).to be_success
+          expect(assigns[:project]).to be_new_record
         end
-
       end
 
-      describe "#create" do
-
+      describe '#create' do
         let(:project) { mock_model(Project) }
-        let(:users)   { double("users") }
+        let(:users)   { double('users') }
 
         before do
           projects.stub(:build).with({}) { project }
-          project.stub(:users => users)
+          project.stub(users: users)
           users.should_receive(:<<).with(user)
-          project.stub(:save => true)
+          project.stub(save: true)
         end
 
         specify do
-          post :create, :project => {}
-          assigns[:project].should == project
+          post :create, project: {}
+          expect(assigns[:project]).to eq project
         end
 
-        context "when save succeeds" do
-
+        context 'when save succeeds' do
           specify do
-            post :create, :project => {}
-            response.should redirect_to(project_url(project))
-            flash[:notice].should == 'Project was successfully created.'
+            post :create, project: {}
+            expect(response).to redirect_to project_url(project)
+            expect(flash[:notice]).to eq 'Project was successfully created.'
           end
-
         end
 
-        context "when save fails" do
-
-          before do
-            project.stub(:save => false)
-          end
+        context 'when save fails' do
+          before { project.stub(save: false) }
 
           specify do
-            post :create, :project => {}
+            post :create, project: {}
             response.should be_success
             response.should render_template('new')
           end
-
         end
-
       end
-
     end
 
-    describe "member actions" do
-
-      let(:project) { mock_model(Project, :id => 42, :to_json => '{foo:bar}') }
+    describe 'member actions' do
+      let(:project) { mock_model(Project, id: 42, to_json: '{foo:bar}') }
       let(:story)   { mock_model(Story) }
 
       before do
@@ -105,100 +89,77 @@ describe ProjectsController do
         project.stub_chain(:stories, :build) { story }
       end
 
-      describe "#show" do
-
-        context "as html" do
-
-          specify do
-            get :show, :id => project.id
-            response.should be_success
-            assigns[:project].should == project
-            assigns[:story].should == story
-          end
-
-        end
-
-        context "as json" do
+      describe '#show' do
+        context 'as html' do
 
           specify do
-            xhr :get, :show, :id => project.id
-            response.should be_success
-            assigns[:project].should == project
-            assigns[:story].should == story
+            get :show, id: project.id
+            expect(response).to be_success
+            expect(assigns[:project]).to eq project
+            expect(assigns[:story]).to eq story
           end
-
         end
 
+        context 'as json' do
+          specify do
+            xhr :get, :show, id: project.id
+            expect(response).to be_success
+            expect(assigns[:project]).to eq project
+            expect(assigns[:story]).to eq story
+          end
+        end
       end
 
-      describe "#edit" do
-
-        let(:users) { double("users") }
+      describe '#edit' do
+        let(:users) { double('users') }
 
         before do
-          project.stub(:users => users)
+          project.stub(users: users)
           users.should_receive(:build)
         end
 
         specify do
-          get :edit, :id => project.id
-          response.should be_success
-          assigns[:project].should == project
+          get :edit, id: project.id
+          expect(response).to be_success
+          expect(assigns[:project]).to eq project
         end
-
       end
 
-      describe "#update" do
+      describe '#update' do
 
-        before do
-          project.stub(:update_attributes).with({}) { true }
-        end
+        before { project.stub(:update_attributes).with({}) { true } }
 
         specify do
-          put :update, :id => project.id, :project => {}
-          assigns[:project].should == project
+          put :update, id: project.id, project: {}
+          expect(assigns[:project]).to eq project
         end
 
-        context "when update succeeds" do
-
+        context 'when update succeeds' do
           specify do
-            put :update, :id => project.id, :project => {}
-            response.should redirect_to(project_url(project))
+            put :update, id: project.id, project: {}
+            expect(response).to redirect_to project_url(project)
           end
-
         end
 
-        context "when update fails" do
-
-          before do
-            project.stub(:update_attributes).with({}) { false }
-          end
+        context 'when update fails' do
+          before { project.stub(:update_attributes).with({}) { false } }
 
           specify do
-            put :update, :id => project.id, :project => {}
+            put :update, id: project.id, project: {}
             response.should be_success
             response.should render_template('edit')
           end
-
         end
-
       end
 
-      describe "#destroy" do
-
-        before do
-          project.should_receive(:destroy)
-        end
+      describe '#destroy' do
+        before { project.should_receive(:destroy) }
 
         specify do
-          delete :destroy, :id => project.id
-          response.should redirect_to(projects_url)
+          delete :destroy, id: project.id
+          expect(response).to redirect_to projects_url
         end
-
       end
-
     end
-
   end
-
 end

@@ -1,176 +1,152 @@
 require 'spec_helper'
 
 describe UsersController do
-
   let(:project) { mock_model(Project) }
 
-  context "when logged out" do
-    %w[index create].each do |action|
+  context 'when logged out' do
+    %w(index create).each do |action|
       specify do
-        get action, :project_id => project.id
-        response.should redirect_to(new_user_session_url)
+        get action, project_id: project.id
+        expect(response).to redirect_to new_user_session_url
       end
     end
-    %w[destroy].each do |action|
-      specify do
-        get action, :id => 42, :project_id => project.id
-        response.should redirect_to(new_user_session_url)
-      end
+    specify do
+      get :destroy, id: 42, project_id: project.id
+      expect(response).to redirect_to new_user_session_url
     end
   end
 
-  context "when logged in" do
-
-    let(:user)  { FactoryGirl.create(:user) }
-    let(:projects)  { double("projects") }
+  context 'when logged in' do
+    let(:user) { create(:user) }
+    let(:projects) { double('projects') }
     let(:users) { [user] }
 
     before do
       sign_in user
-      subject.stub(:current_user => user)
-      user.stub(:projects => projects)
+      subject.stub(current_user: user)
+      user.stub(projects: projects)
       projects.stub(:find).with(project.id.to_s) { project }
-      project.stub(:users => users)
+      project.stub(users: users)
     end
 
-    describe "collection actions" do
-
-      describe "#index" do
-
-        context "as html" do
+    describe 'collection actions' do
+      describe '#index' do
+        context 'as html' do
           specify do
-            get :index, :project_id => project.id
-            response.should be_success
-            assigns[:project].should == project
-            assigns[:users].should == users
+            get :index, project_id: project.id
+            expect(response).to be_success
+            expect(assigns[:project]).to eq project
+            expect(assigns[:users]).to eq users
           end
         end
 
-        context "as json" do
+        context 'as json' do
           specify do
-            xhr :get, :index, :project_id => project.id, :format => :json
-            response.should be_success
-            response.body.should == users.to_json
+            xhr :get, :index, project_id: project.id, format: :json
+            expect(response).to be_success
+            expect(response.body).to eq [user].to_json
           end
-
         end
-
       end
 
-      describe "#create" do
+      describe '#create' do
 
-        let(:user_params) {{
-          "email"     => "user@example.com",
-          "name"      => "Test User",
-          "initials"  => "TU"
-        }}
-
-        before do
-          User.stub(:find_or_create_by_email).with(user_params["email"]) { user }
+        let(:user_params) do
+          { 'email'     => 'user@example.com',
+            'name'      => 'Test User',
+            'initials'  => 'TU' }
         end
+
+        before { User.stub(:find_or_create_by_email).with(user_params['email']) { user } }
 
         specify do
-          post :create, :project_id => project.id, :user => user_params
-          assigns[:project].should == project
-          assigns[:users].should == users
+          post :create, project_id: project.id, user: user_params
+          expect(assigns[:project]).to eq project
+          expect(assigns[:users]).to eq users
         end
 
-        context "when user does not exist" do
-
+        context 'when user does not exist' do
           before do
-            user.stub(:new_record? => true)
-            user.stub(:save => true)
-            User.stub(:find_or_create_by_email).with(user_params["email"]).and_yield(user).and_return(user)
+            user.stub(new_record?: true)
+            user.stub(save: true)
+            User.stub(:find_or_create_by_email).with(user_params['email']).and_yield(user).and_return(user)
           end
 
           specify do
-            post :create, :project_id => project.id, :user => user_params
-            user.name.should == user_params["name"]
-            user.initials.should == user_params["initials"]
-            user.was_created.should be_true
-            response.should redirect_to(project_users_url(project))
+            post :create, project_id: project.id, user: user_params
+            expect(user.name).to eq user_params['name']
+            expect(user.initials).to eq user_params['initials']
+            expect(user.was_created).to be_true
+            expect(response).to redirect_to project_users_url(project)
           end
 
-          context "when save fails" do
-
-            before do
-              user.stub(:save => false)
-            end
+          context 'when save fails' do
+            before { user.stub(save: false) }
 
             specify do
-              post :create, :project_id => project.id, :user => user_params
-              response.should render_template('index')
+              post :create, project_id: project.id, user: user_params
+              expect(response).to render_template('index')
             end
-
           end
         end
 
-        context "when user exists" do
-
+        context 'when user exists' do
           before do
-            user.stub(:new_record? => false)
-            User.stub(:find_or_create_by_email).with(user_params["email"]) { user }
+            user.stub(new_record?: false)
+            User.stub(:find_or_create_by_email).with(user_params['email']) { user }
           end
 
           specify do
-            post :create, :project_id => project.id, :user => user_params
-            user.was_created.should be_false
+            post :create, project_id: project.id, user: user_params
+            expect(user.was_created).to be_false
           end
         end
 
-        context "when user is already a project member" do
-
-          before do
-            users.stub(:include?).with(user) { true }
-          end
+        context 'when user is already a project member' do
+          before { users.stub(:include?).with(user) { true } }
 
           specify do
-            post :create, :project_id => project.id, :user => user_params
-            flash[:alert].should == "#{user.email} is already a member of this project"
+            post :create, project_id: project.id, user: user_params
+            expect(flash[:alert]).to eq "#{user.email} is already a member of this project"
           end
         end
 
-        context "when user is not already a project member" do
+        context 'when user is not already a project member' do
+          before { users.stub(:include?).with(user) { false } }
 
-          before do
-            users.stub(:include?).with(user) { false }
-          end
-
-          context "and user was created" do
+          context 'and user was created' do
             before { user.stub(:was_created) { true } }
+
             specify do
-              post :create, :project_id => project.id, :user => user_params
-              flash[:notice].should == "#{user.email} was sent an invite to join this project"
+              post :create, project_id: project.id, user: user_params
+              expect(flash[:notice]).to eq "#{user.email} was sent an invite to join this project"
             end
           end
-          context "and user already existed" do
+
+          context 'and user already existed' do
             before { user.stub(:was_created) { false } }
+
             specify do
-              post :create, :project_id => project.id, :user => user_params
-              flash[:notice].should == "#{user.email} was added to this project"
+              post :create, project_id: project.id, user: user_params
+              expect(flash[:notice]).to eq "#{user.email} was added to this project"
             end
           end
         end
       end
     end
 
-    describe "member actions" do
-
-      describe "#destroy" do
-
+    describe 'member actions' do
+      describe '#destroy' do
         before do
           users.stub(:find).with(user.id.to_s) { user }
           users.should_receive(:delete).with(user)
         end
 
         specify do
-          delete :destroy, :project_id => project.id, :id => user.id
-          response.should redirect_to(project_users_url(project))
+          delete :destroy, project_id: project.id, id: user.id
+          expect(response).to redirect_to project_users_url(project)
         end
-
       end
-
     end
-
   end
 end
